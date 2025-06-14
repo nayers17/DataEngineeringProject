@@ -1,21 +1,17 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-if [ -e "/opt/airflow/requests.txt" ]; then
-    $(command -v pip) install --user -r requirements.txt
+airflow db upgrade                      # wait until schema is up‑to‑date
+
+# create the admin user only once
+if ! airflow users list | grep -q ' admin '; then
+  airflow users create \
+    --username "${AIRFLOW_DEFAULT_USER:-admin}" \
+    --password "${AIRFLOW_DEFAULT_PASS:-admin}" \
+    --firstname "${AIRFLOW_DEFAULT_FN:-Admin}" \
+    --lastname  "${AIRFLOW_DEFAULT_LN:-User}" \
+    --role Admin \
+    --email "${AIRFLOW_DEFAULT_EMAIL:-admin@example.com}"
 fi
-
-if [ ! -f "/opt/airflow/airflow.db"]; then
-    airflow db init && \
-    airflow users create \
-        --username admin \
-        --firstname admin \
-        --lastname admin \
-        --role Admin \
-        --email admin@example.com \
-        --password admin 
-fi
-
-$(command -v airflow) db upgrade
 
 exec airflow webserver
